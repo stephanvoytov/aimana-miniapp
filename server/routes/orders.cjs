@@ -61,6 +61,7 @@ function listOrders(req, res) {
       total: o.total,
       status: o.status,
       items: items.map((i) => ({
+        productId: i.product_id,
         name: i.name,
         size: i.size,
         color: i.color,

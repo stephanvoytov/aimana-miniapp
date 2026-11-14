@@ -1,5 +1,7 @@
 import rawProducts from "../../data/products.json";
 
+import { assetUrl } from "@/lib/utils";
+
 export type CategoryId = "glasses" | "clothes" | "accessories";
 
 export type Product = {
@@ -25,7 +27,11 @@ export const CATEGORIES: { id: "all" | CategoryId; title: string }[] = [
   { id: "accessories", title: "Аксессуары" },
 ];
 
-export const PRODUCTS: Product[] = rawProducts as Product[];
+export const PRODUCTS: Product[] = (rawProducts as Product[]).map((p) => ({
+  ...p,
+  image: assetUrl(p.image),
+  images: p.images?.map(assetUrl),
+}));
 
 export function productTags(p: Product): string[] {
   const tags: string[] = [];

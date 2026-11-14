@@ -3,10 +3,12 @@
  * Внутри Telegram доступен window.Telegram.WebApp (подключается в index.html);
  * в обычном браузере все функции — безопасные noop с фолбэками.
  */
+import { getThemeMode, registerSystemThemeHandler } from "@/lib/theme";
 
 type WebAppUser = {
   id?: number;
   first_name?: string;
+  last_name?: string;
   username?: string;
   photo_url?: string;
 };
@@ -60,6 +62,9 @@ export function isTma(): boolean {
 
 /** Перекладываем themeParams Telegram в наши CSS-переменные. */
 export function applyTelegramTheme(): void {
+  // Принудительную тему пользователя не перебиваем.
+  if (getThemeMode() !== "system") return;
+
   const app = getWebApp();
   if (!app) return;
 
@@ -74,14 +79,15 @@ export function applyTelegramTheme(): void {
   set("--tg-page-bg", p.bg_color);
   set("--tg-text", p.text_color);
   set("--tg-hint", p.hint_color);
-  set("--tg-accent", p.button_color ?? p.link_color);
-  set("--tg-accent-ink", p.button_text_color);
   set("--tg-line", p.section_separator_color);
+  // акцент всегда брендовый: его выставляет applyBranding()
 }
 
 export function initTelegram(): void {
   if (!isTma()) return;
   const app = getWebApp()!;
+  // при возврате к «системной» теме перечитываем текущую тему Telegram
+  registerSystemThemeHandler(applyTelegramTheme);
   applyTelegramTheme();
   app.ready();
   app.expand();

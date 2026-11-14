@@ -6,7 +6,9 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
+import { tabFromPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useStore, type TabId } from "@/state/store";
 
@@ -22,12 +24,14 @@ const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
  * Содержимое плавающей пилюли таб-бара (сама пилюля — в App).
  */
 export function TabBar() {
-  const { route, go, cartCount, cartPulse } = useStore();
+  const { pathname } = useLocation();
+  const { go, cartCount, cartPulse } = useStore();
+  const activeTab = tabFromPath(pathname);
 
   return (
     <nav aria-label="Основная навигация" className="flex py-1">
       {TABS.map((tab) => {
-        const active = route.tab === tab.id;
+        const active = activeTab === tab.id;
         const Icon = tab.icon;
         return (
           <button
@@ -48,7 +52,7 @@ export function TabBar() {
                   strokeWidth={active ? 2.4 : 1.8}
                   className={cn(
                     "transition-colors duration-150",
-                    tab.id === "home" && active && "fill-accent",
+                    active && (tab.id === "home" || tab.id === "profile") && "fill-accent",
                     active ? "text-accent" : "text-hint",
                   )}
                 />
@@ -60,7 +64,7 @@ export function TabBar() {
                   key={cartPulse}
                   className={cn(
                     cartPulse > 0 && "anim-badge",
-                    "absolute -right-2 -top-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium text-accent-ink",
+                    "absolute -right-2 -top-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[10px] font-medium text-white ring-2 ring-page",
                   )}
                 >
                   {cartCount}

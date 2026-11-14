@@ -9,6 +9,8 @@
  * (чёрный по светлому). Если постер тёмный — в HeroCarousel поменяйте
  * text-black/bg-black на белые варианты.
  */
+import { assetUrl } from "@/lib/utils";
+
 export type Poster = {
   id: string;
   title: string;
@@ -19,7 +21,7 @@ export type Poster = {
   collection: "all" | "new" | "best" | "sale";
 };
 
-export const POSTERS: Poster[] = [
+const POSTER_DATA: Poster[] = [
   {
     id: "new-collection",
     title: "Новая коллекция",
@@ -45,3 +47,8 @@ export const POSTERS: Poster[] = [
     collection: "sale",
   },
 ];
+
+export const POSTERS: Poster[] = POSTER_DATA.map((p) => ({
+  ...p,
+  image: assetUrl(p.image),
+}));

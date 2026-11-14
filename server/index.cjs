@@ -9,8 +9,8 @@ const products = require('./routes/products.cjs');
 const cart = require('./routes/cart.cjs');
 const orders = require('./routes/orders.cjs');
 const favorites = require('./routes/favorites.cjs');
+const admin = require('./routes/admin.cjs');
 const { adminMiddleware } = require('./middleware/admin.cjs');
-const { db } = require('./db.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,22 +29,10 @@ app.put("/api/products/:id", adminMiddleware, products.updateProduct);
 app.delete("/api/products/:id", adminMiddleware, products.deleteProduct);
 
 // Admin endpoints
-app.get("/api/admin/stats", adminMiddleware, (req, res) => {
-  const productsCount = db.prepare("SELECT COUNT(*) AS c FROM products").get().c;
-  const ordersCount = db.prepare("SELECT COUNT(*) AS c FROM orders").get().c;
-  const revenue = db.prepare("SELECT COALESCE(SUM(total),0) AS s FROM orders").get().s;
-  const usersCount = db.prepare("SELECT COUNT(*) AS c FROM users").get().c;
-  const newOrders = db.prepare("SELECT COUNT(*) AS c FROM orders WHERE status='new'").get().c;
-  res.json({ products: productsCount, orders: ordersCount, revenue, users: usersCount, newOrders });
-});
-app.put("/api/orders/:id/status", adminMiddleware, (req, res) => {
-  const { status } = req.body || {};
-  const allowed = ["new", "processing", "shipped", "delivered", "cancelled"];
-  if (!allowed.includes(status)) return res.status(400).json({ error: "bad status" });
-  const info = db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, req.params.id);
-  if (info.changes === 0) return res.status(404).json({ error: "not found" });
-  res.json({ ok: true, status });
-});
+app.get("/api/admin/stats", adminMiddleware, admin.stats);
+app.get("/api/admin/orders", adminMiddleware, admin.listOrders);
+app.get("/api/admin/users", adminMiddleware, admin.listUsers);
+app.put("/api/orders/:id/status", adminMiddleware, admin.updateOrderStatus);
 
 // Authenticated routes
 app.get("/api/me", authMiddleware, (req, res) => res.json(req.user));
@@ -85,18 +73,49 @@ const server = app.listen(PORT, () => {
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (BOT_TOKEN) {
   try {
-    const TelegramBot = require("node-telegram-bot-api");
-    const bot = new TelegramBot(BOT_TOKEN, { polling: process.env.NODE_ENV !== "production" });
+    const { Bot } = require("node-telegram-bot-api");
+    const bot = new Bot(BOT_TOKEN);
     const ADMIN_CHAT = process.env.ADMIN_CHAT_ID;
-    bot.onText(/\/start/, (msg) => {
-      bot.sendMessage(msg.chat.id, "Добро пожаловать в магазин! Откройте Mini App через кнопку меню.");
+    const WEBAPP_URL = process.env.WEBAPP_URL || process.env.VITE_WEBAPP_URL || "";
+
+    bot.command("start", (ctx) => {
+      const chatId = ctx.chat && ctx.chat.id;
+      if (!chatId) return;
+      console.log(`[bot] /start from chat ${chatId}`);
+      const text = "Добро пожаловать в магазин Aimana! Откройте Mini App кнопкой ниже.";
+      if (WEBAPP_URL) {
+        ctx
+          .reply(text, {
+            reply_markup: {
+              inline_keyboard: [[{ text: "Открыть магазин", web_app: { url: WEBAPP_URL } }]],
+            },
+          })
+          .catch(() => {});
+      } else {
+        ctx.reply(text).catch(() => {});
+      }
     });
-    // expose bot for order notifications
-    app.locals.bot = bot;
+
+    // совместимость со старым кодом уведомлений о заказах
+    app.locals.bot = {
+      sendMessage: (chatId, text) =>
+        bot.api.sendMessage({ chat_id: chatId, text }).catch(() => {}),
+    };
     app.locals.adminChat = ADMIN_CHAT;
-    console.log("Telegram bot started (polling:", process.env.NODE_ENV !== "production", ")");
+
+    bot
+      .startPolling()
+      .then(() => console.log("Telegram bot started (polling)"))
+      .catch((e) => console.warn("Bot polling failed:", e && e.message));
+
+    if (!ADMIN_CHAT) {
+      console.warn("ADMIN_CHAT_ID is not set: order notifications are disabled");
+    }
+    if (!WEBAPP_URL) {
+      console.warn("WEBAPP_URL is not set: /start will not open the Mini App");
+    }
   } catch (e) {
-    console.warn("Bot failed to start:", e.message);
+    console.warn("Bot failed to start:", e && e.message);
   }
 }
 

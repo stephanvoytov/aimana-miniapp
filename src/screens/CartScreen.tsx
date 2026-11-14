@@ -45,14 +45,16 @@ export function CartScreen() {
     );
   }
 
+  // цена за единицу: детали заказа считают строку как price × qty
   const orderItems = cart.map((l) => {
     const p = byId.get(l.productId);
     return {
+      productId: l.productId,
       name: p?.name ?? l.productId,
       size: l.size,
       color: l.color,
       qty: l.qty,
-      price: (p?.price ?? 0) * l.qty,
+      price: p?.price ?? 0,
     };
   });
 
@@ -65,22 +67,35 @@ export function CartScreen() {
     const sent = sendToBot({
       action: "checkout",
       customer,
-      items: orderItems,
+      items: orderItems.map((item) => ({
+        ...item,
+        price: item.price * item.qty,
+      })),
       total: cartTotal,
     });
+
+    // локальная запись нужна в обоих режимах: детали заказа читают её
+    const saveOrder = (id: string) =>
+      addOrder({
+        id,
+        date: new Date().toISOString(),
+        count: cartCount,
+        total: cartTotal,
+        status: "new",
+        items: orderItems,
+        customer,
+      });
+
     if (!DEMO_MODE) {
       api
         .createOrder(customer, cartDiscount)
-        .then(() => {
-          addOrder({
-            id: `№${String(Date.now()).slice(-4)}`,
-            date: new Date().toISOString(),
-            count: cartCount,
-            total: cartTotal,
-          });
+        .then((res: { id?: string } | null) => {
+          saveOrder(
+            res?.id || `№${String(Date.now()).slice(-4)}`,
+          );
           setCheckoutOpen(false);
           clearCart();
-          showToast(sent ? "Заказ отправлен в чат бота" : "Заказ оформлен (демо)");
+          showToast(sent ? "Заказ отправлен в чат бота" : "Заказ оформлен");
         })
         .catch(() => {
           showToast("Не удалось оформить заказ");
@@ -88,12 +103,7 @@ export function CartScreen() {
       return;
     }
     // локальный режим
-    addOrder({
-      id: `№${String(Date.now()).slice(-4)}`,
-      date: new Date().toISOString(),
-      count: cartCount,
-      total: cartTotal,
-    });
+    saveOrder(`№${String(Date.now()).slice(-4)}`);
     setCheckoutOpen(false);
     clearCart();
     showToast(sent ? "Заказ отправлен в чат бота" : "Заказ оформлен (демо)");

@@ -5,8 +5,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // base "./" — чтобы билд можно было отдать из любой подпапки
-  base: "./",
+  // абсолютные пути: BrowserRouter открывает /product/... напрямую,
+  // и относительные ./assets на вложенном URL сломались бы
+  base: "/",
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

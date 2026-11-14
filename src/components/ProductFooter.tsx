@@ -14,9 +14,9 @@ import { useStore } from "@/state/store";
  *   нет в корзине -> "В корзину";
  *   есть         -> [−] "В корзине · N" [+], минус до нуля убирает позиция.
  */
-export function ProductFooter() {
-  const { route, cart, addToCart, setLineQty, productSel, showToast } = useStore();
-  const product = PRODUCTS.find((p) => p.id === route.productId);
+export function ProductFooter({ slug }: { slug: string }) {
+  const { cart, addToCart, setLineQty, productSel, showToast } = useStore();
+  const product = PRODUCTS.find((p) => p.id === slug);
 
   const [burst, setBurst] = useState(0);
   const [flash, setFlash] = useState(false);

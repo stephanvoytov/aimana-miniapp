@@ -8,10 +8,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { PRODUCTS, type CategoryId, type Product } from "@/data/products";
 import { haptic } from "@/lib/telegram";
 import { api, DEMO_MODE } from "@/lib/api";
+import { productPath, TAB_PATHS } from "@/lib/routes";
 
 export type TabId = "home" | "catalog" | "favorites" | "cart" | "profile";
 export type SortKey = "popular" | "price-asc" | "price-desc" | "new";
@@ -25,14 +27,32 @@ export type CartLine = {
   qty: number;
 };
 
+export type OrderStatus =
+  | "new"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export type OrderItem = {
+  productId?: string;
+  name: string;
+  size?: string;
+  color?: string;
+  qty: number;
+  /** цена за единицу */
+  price: number;
+};
+
 export type Order = {
   id: string;
   date: string; // ISO
   count: number;
   total: number;
+  status?: OrderStatus;
+  items?: OrderItem[];
+  customer?: { name: string; phone: string; comment?: string };
 };
-
-export type Route = { tab: TabId; productId: string | null };
 
 export type Variant = { productId: string; size: string; color: string };
 
@@ -41,10 +61,8 @@ type Persisted = { favs: string[]; cart: CartLine[]; orders: Order[] };
 const STORAGE_KEY = "aimana.store.v1";
 
 type StoreValue = {
-  route: Route;
   go: (tab: TabId) => void;
   openProduct: (id: string) => void;
-  closeProduct: () => void;
 
   query: string;
   setQuery: (v: string) => void;
@@ -87,6 +105,7 @@ type StoreValue = {
 
   orders: Order[];
   addOrder: (o: Order) => void;
+  clearOrders: () => void;
 
   productSel: Variant | null;
   selectVariant: (patch: Partial<{ size: string; color: string }>) => void;
@@ -118,8 +137,8 @@ function loadPersisted(): Persisted {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const initial = useRef(loadPersisted()).current;
   const USE_API = !DEMO_MODE;
+  const navigate = useNavigate();
 
-  const [route, setRoute] = useState<Route>({ tab: "home", productId: null });
   const [query, setQuery] = useState("");
   const [category, setCategoryRaw] = useState<"all" | CategoryId>("all");
   const [sort, setSort] = useState<SortKey>("popular");
@@ -216,23 +235,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSort("popular");
   }, []);
 
-  const go = useCallback((tab: TabId) => {
-    haptic("light");
-    setRoute({ tab, productId: null });
-  }, []);
+  const go = useCallback(
+    (tab: TabId) => {
+      haptic("light");
+      navigate(TAB_PATHS[tab]);
+    },
+    [navigate],
+  );
 
-  const openProduct = useCallback((id: string) => {
-    haptic("light");
-    const p = PRODUCTS.find((x) => x.id === id);
-    if (p) {
-      setProductSel({ productId: id, size: p.sizes[0], color: p.colors[0] });
-    }
-    setRoute((r) => ({ ...r, productId: id }));
-  }, []);
-
-  const closeProduct = useCallback(() => {
-    setRoute((r) => ({ ...r, productId: null }));
-  }, []);
+  const openProduct = useCallback(
+    (id: string) => {
+      haptic("light");
+      const p = PRODUCTS.find((x) => x.id === id);
+      if (p) {
+        setProductSel({ productId: id, size: p.sizes[0], color: p.colors[0] });
+      }
+      navigate(productPath(id));
+    },
+    [navigate],
+  );
 
   const isFav = useCallback((id: string) => favs.includes(id), [favs]);
 
@@ -343,6 +364,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setOrders((prev) => [o, ...prev].slice(0, 30));
   }, []);
 
+  const clearOrders = useCallback(() => setOrders([]), []);
+
   const selectVariant = useCallback(
     (patch: Partial<{ size: string; color: string }>) => {
       setProductSel((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -415,10 +438,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   ]);
 
   const value: StoreValue = {
-    route,
     go,
     openProduct,
-    closeProduct,
     query,
     setQuery,
     category,
@@ -454,6 +475,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     bumpCartPulse,
     orders,
     addOrder,
+    clearOrders,
     productSel,
     selectVariant,
     checkoutOpen,

@@ -1,32 +1,41 @@
 import { ChevronLeft, Heart } from "lucide-react";
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 
 import { ProductGallery } from "@/components/ProductGallery";
 import { Lightbox } from "@/components/ProductLightbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PRODUCTS, productImages, productTags } from "@/data/products";
+import { TAB_PATHS, useAppBack } from "@/lib/routes";
 import { cn, formatPrice } from "@/lib/utils";
 import { haptic } from "@/lib/telegram";
 import { useStore } from "@/state/store";
 
 export function ProductScreen() {
-  const {
-    route,
-    closeProduct,
-    isFav,
-    toggleFav,
-    openProduct,
-    productSel,
-    selectVariant,
-  } = useStore();
+  const { slug } = useParams<{ slug: string }>();
+  const { isFav, toggleFav, openProduct, productSel, selectVariant } =
+    useStore();
+  const back = useAppBack(TAB_PATHS.catalog);
 
   // индекс кадра и открыт ли полноэкранный просмотр
   const [viewer, setViewer] = useState({ open: false, index: 0 });
 
-  const product = PRODUCTS.find((p) => p.id === route.productId) ?? null;
+  const product = PRODUCTS.find((p) => p.id === slug) ?? null;
 
-  if (!product) return null;
+  if (!product) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-8 pb-5 pt-24 text-center">
+        <div className="text-[17px] font-semibold">Товар не найден</div>
+        <div className="text-[15px] text-hint">
+          Возможно, ссылка устарела или товар больше не продаётся.
+        </div>
+        <Button variant="field" className="mt-4" onClick={back}>
+          В каталог
+        </Button>
+      </div>
+    );
+  }
 
   const images = productImages(product);
 
@@ -57,7 +66,7 @@ export function ProductScreen() {
           <button
             className="absolute left-2.5 top-2.5 z-10 flex size-9 items-center justify-center rounded-full bg-black/16 text-white ring-1 ring-white/25 transition-transform active:scale-90"
             aria-label="Назад"
-            onClick={closeProduct}
+            onClick={back}
           >
             <ChevronLeft size={20} strokeWidth={2.2} />
           </button>

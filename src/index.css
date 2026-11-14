@@ -17,6 +17,22 @@
   --color-tag: var(--tg-tag-bg);
   --color-tag-ink: var(--tg-tag-text);
 
+  /* админка живёт в собственной светлой палитре и не зависит от темы витрины */
+  --color-adm-bg: #f4f5f7;
+  --color-adm-card: #ffffff;
+  --color-adm-soft: #f6f7f9;
+  --color-adm-line: #e8e9ee;
+  --color-adm-ink: #15171c;
+  --color-adm-muted: #6b7280;
+  --color-adm-blue: #2563eb;
+  --color-adm-blue-soft: #eef3ff;
+  --color-adm-green: #168a4b;
+  --color-adm-green-soft: #e8f7ef;
+  --color-adm-amber: #b45309;
+  --color-adm-amber-soft: #fef3e2;
+  --color-adm-red: #c62828;
+  --color-adm-red-soft: #fdecec;
+
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -358,6 +374,56 @@
   .anim-btn-pop {
     animation: btn-pop 240ms ease-out;
   }
+
+  /* админские панели поверх страницы */
+  @keyframes admin-drawer-in {
+    from {
+      opacity: 0.65;
+      transform: translateX(36px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes admin-drawer-out {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(36px);
+    }
+  }
+  @keyframes admin-modal-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 8px)) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+  .admin-drawer[data-state="open"] {
+    animation: admin-drawer-in 240ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .admin-drawer[data-state="closed"] {
+    animation: admin-drawer-out 180ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
+  }
+  .admin-modal[data-state="open"] {
+    animation: admin-modal-in 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .admin-modal[data-state="closed"] {
+    animation: overlay-out 150ms ease-out forwards;
+  }
+  .admin-overlay[data-state="open"] {
+    animation: overlay-in 200ms ease-out both;
+  }
+  .admin-overlay[data-state="closed"] {
+    animation: overlay-out 160ms ease-out forwards;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -377,6 +443,9 @@
   .anim-step,
   .anim-toast,
   .anim-btn-pop,
+  .admin-drawer,
+  .admin-modal,
+  .admin-overlay,
   .confetti-bit {
     animation: none;
   }
